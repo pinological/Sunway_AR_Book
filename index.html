@@ -1,44 +1,135 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sunway AR Webpage</title>
-  <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-  <script src="https://unpkg.com/aframe-html-shader@1.3.0/dist/aframe-html-shader.min.js"></script>
-  <style>
-    #webpageContent {
-      width: 512px;
-      height: 282px;
-      background: white;
-      color: #222;
-      font-family: Arial, sans-serif;
-      padding: 20px;
-      box-sizing: border-box;
-      border-radius: 12px;
-    }
-  </style>
+    <title>Harry Potter AR Brochure</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden; /* Hide scrollbars, especially important for AR */
+            font-family: 'Arial', sans-serif;
+            background-color: #000;
+        }
+        #ar-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1; /* AR content typically behind the interactive overlay */
+        }
+        #interactive-iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            border: none;
+            display: none; /* Hidden by default */
+            z-index: 100; /* Always on top of the AR content */
+            background-color: rgba(0, 0, 0, 0.7); /* Optional: semi-transparent background for iframe */
+        }
+        #loading-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #333;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            font-size: 1.2em;
+            z-index: 200;
+            text-align: center;
+        }
+        #loading-screen p {
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #ccc;
+        }
+    </style>
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.1/dist/mindar-image-aframe.prod.js"></script>
 </head>
 <body>
-  <!-- Hidden HTML content to be rendered in AR -->
-  <div id="webpageContent" style="display:none;">
-    <h2>Welcome to Sunway!</h2>
-    <p>This is a sample webpage rendered in AR using <b>aframe-html-shader</b>.</p>
-    <a href="https://sunway.edu.my" target="_blank">Visit Sunway University</a>
-  </div>
+    <div id="loading-screen">
+        <p>Loading AR experience...</p>
+        <p>Please allow camera access.</p>
+    </div>
 
-  <a-scene mindar-image="imageTargetSrc: targets.mind;" color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
-    <a-assets>
-      <img id="card" src="collegeAds.jpeg" />
-    </a-assets>
+    <div id="ar-container">
+        <a-scene
+            mindar-image="imageTargetSrc: ./targets.mind; autoStart: false;"
+            vr-mode-ui="enabled: false"
+            device-orientation-permission-ui="enabled: false"
+            embedded
+            color-space="sRGB"
+            renderer="colorManagement: true, physicallyCorrectLights: true"
+            loading-screen="#loading-screen"
+        >
+            <a-camera
+                position="0 0 0"
+                look-controls="enabled: false"
+                mindar-image-auto-start="true"
+            ></a-camera>
 
-    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+            <a-entity mindar-image-target="targetIndex: 0" id="brochure-target">
+                </a-entity>
+        </a-scene>
+    </div>
 
-    <a-entity mindar-image-target="targetIndex: 0">
-      <a-plane src="#card" position="0 0 0" height="0.552" width="1" rotation="0 0 0"></a-plane>
-      <a-plane material="shader: html; target: #webpageContent" position="0 0 0.1" height="0.552" width="1" rotation="0 0 0"></a-plane>
-    </a-entity>
-  </a-scene>
+    <iframe id="interactive-iframe" src="./interactive-content.html"></iframe>
+
+    <script>
+        const brochureTarget = document.querySelector('#brochure-target');
+        const interactiveIframe = document.querySelector('#interactive-iframe');
+        const loadingScreen = document.querySelector('#loading-screen');
+        const arScene = document.querySelector('a-scene');
+
+        // Handle MindAR scene loaded event (optional, but good for UX)
+        arScene.addEventListener('loaded', () => {
+            console.log('MindAR scene loaded.');
+            // MindAR's loading screen component usually handles hiding itself.
+            // If not, you might explicitly hide your custom loading screen here.
+        });
+
+        // Event listener for when the target image is found
+        brochureTarget.addEventListener('targetFound', () => {
+            console.log('Brochure target found! Showing interactive content.');
+            interactiveIframe.style.display = 'block'; // Show the iframe
+            // Optionally, send a message to the iframe
+            if (interactiveIframe.contentWindow) {
+                interactiveIframe.contentWindow.postMessage('targetFound', '*');
+            }
+        });
+
+        // Event listener for when the target image is lost
+        brochureTarget.addEventListener('targetLost', () => {
+            console.log('Brochure target lost! Hiding interactive content.');
+            interactiveIframe.style.display = 'none'; // Hide the iframe
+            // Optionally, send a message to the iframe
+            if (interactiveIframe.contentWindow) {
+                interactiveIframe.contentWindow.postMessage('targetLost', '*');
+            }
+        });
+
+        // Optional: Listen for messages from the iframe
+        window.addEventListener('message', (event) => {
+            // It's crucial to check the origin for security in a real application
+            // For local development, '*' is often used, but be careful in production.
+            if (event.data === 'interactionComplete') {
+                console.log('Received message from iframe: interactionComplete');
+                // You could, for example, hide the iframe here if an interaction is finished
+                // interactiveIframe.style.display = 'none';
+            }
+        });
+
+        // This is a common pattern to auto-start MindAR once scene is ready or user gesture is detected
+        // A-Frame's mindar-image-auto-start component on the camera handles this in recent versions.
+        // If you face issues with camera access, consider adding a button for user interaction.
+    </script>
 </body>
 </html>
