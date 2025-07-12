@@ -29,6 +29,9 @@
             z-index: 100; /* Always on top of the AR content */
             background-color: rgba(0, 0, 0, 0.7); /* Optional: semi-transparent background for iframe */
         }
+        /*
+        The default MindAR device-orientation-permission-ui often creates a loading/permission screen.
+        We can remove our custom one if MindAR's is sufficient.
         #loading-screen {
             position: absolute;
             top: 0;
@@ -50,31 +53,27 @@
             font-size: 0.9em;
             color: #ccc;
         }
+        */
     </style>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.1/dist/mindar-image-aframe.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 </head>
 <body>
-    <div id="loading-screen">
-        <p>Loading AR experience...</p>
-        <p>Please allow camera access.</p>
-    </div>
-
     <div id="ar-container">
         <a-scene
-            mindar-image="imageTargetSrc: ./targets.mind; autoStart: false;"
-            vr-mode-ui="enabled: false"
-            device-orientation-permission-ui="enabled: false"
-            embedded
+            mindar-image="imageTargetSrc: ./targets.mind;"
             color-space="sRGB"
             renderer="colorManagement: true, physicallyCorrectLights: true"
-            loading-screen="#loading-screen"
-        >
+            vr-mode-ui="enabled: false"
+            device-orientation-permission-ui="enabled: true" embedded
+            >
+            <a-assets>
+                </a-assets>
+
             <a-camera
                 position="0 0 0"
                 look-controls="enabled: false"
-                mindar-image-auto-start="true"
-            ></a-camera>
+                ></a-camera>
 
             <a-entity mindar-image-target="targetIndex: 0" id="brochure-target">
                 </a-entity>
@@ -86,15 +85,13 @@
     <script>
         const brochureTarget = document.querySelector('#brochure-target');
         const interactiveIframe = document.querySelector('#interactive-iframe');
-        const loadingScreen = document.querySelector('#loading-screen');
-        const arScene = document.querySelector('a-scene');
+        // const loadingScreen = document.querySelector('#loading-screen'); // If you removed this, remove from here too
+        // const arScene = document.querySelector('a-scene'); // Keep this if you need scene loaded event
 
-        // Handle MindAR scene loaded event (optional, but good for UX)
-        arScene.addEventListener('loaded', () => {
-            console.log('MindAR scene loaded.');
-            // MindAR's loading screen component usually handles hiding itself.
-            // If not, you might explicitly hide your custom loading screen here.
-        });
+        // If you're relying on device-orientation-permission-ui, you might not need an explicit loaded listener here
+        // arScene.addEventListener('loaded', () => {
+        //     console.log('MindAR scene loaded.');
+        // });
 
         // Event listener for when the target image is found
         brochureTarget.addEventListener('targetFound', () => {
@@ -118,18 +115,13 @@
 
         // Optional: Listen for messages from the iframe
         window.addEventListener('message', (event) => {
-            // It's crucial to check the origin for security in a real application
-            // For local development, '*' is often used, but be careful in production.
             if (event.data === 'interactionComplete') {
                 console.log('Received message from iframe: interactionComplete');
-                // You could, for example, hide the iframe here if an interaction is finished
-                // interactiveIframe.style.display = 'none';
             }
         });
 
-        // This is a common pattern to auto-start MindAR once scene is ready or user gesture is detected
-        // A-Frame's mindar-image-auto-start component on the camera handles this in recent versions.
-        // If you face issues with camera access, consider adding a button for user interaction.
+        // The device-orientation-permission-ui component handles camera permission and auto-start
+        // of MindAR when enabled on the <a-scene> tag.
     </script>
 </body>
 </html>
