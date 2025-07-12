@@ -2,11 +2,11 @@
 <html>
 <head>
     <title>Harry Potter AR Brochure</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no" />
     <style>
         body {
             margin: 0;
-            overflow: hidden; /* Hide scrollbars, especially important for AR */
+            overflow: hidden; /* Hide scrollbars */
             font-family: 'Arial', sans-serif;
             background-color: #000;
         }
@@ -16,44 +16,21 @@
             left: 0;
             width: 100vw;
             height: 100vh;
-            z-index: 1; /* AR content typically behind the interactive overlay */
+            z-index: 1; /* AR content */
         }
         #interactive-iframe {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
             border: none;
             display: none; /* Hidden by default */
             z-index: 100; /* Always on top of the AR content */
-            background-color: rgba(0, 0, 0, 0.7); /* Optional: semi-transparent background for iframe */
+            transform-origin: top left; /* Important for future potential CSS transforms */
+            /* Initial width/height/top/left will be set by JS */
+            background-color: rgba(0, 0, 0, 0.7); /* Semi-transparent background for iframe */
+            box-shadow: 0 0 15px rgba(106, 13, 173, 0.8); /* Optional: add a glow */
+            border-radius: 8px; /* Optional: rounded corners for the iframe */
+            transition: opacity 0.3s ease-in-out; /* Smooth fade when appearing/disappearing */
+            opacity: 0; /* Start invisible for the fade-in effect */
         }
-        /*
-        The default MindAR device-orientation-permission-ui often creates a loading/permission screen.
-        We can remove our custom one if MindAR's is sufficient.
-        #loading-screen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: #333;
-            color: #fff;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            font-size: 1.2em;
-            z-index: 200;
-            text-align: center;
-        }
-        #loading-screen p {
-            margin-top: 20px;
-            font-size: 0.9em;
-            color: #ccc;
-        }
-        */
     </style>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
@@ -66,16 +43,15 @@
             renderer="colorManagement: true, physicallyCorrectLights: true"
             vr-mode-ui="enabled: false"
             device-orientation-permission-ui="enabled: true" embedded
-            >
+        >
             <a-assets>
                 </a-assets>
 
-            <a-camera
-                position="0 0 0"
-                look-controls="enabled: false"
-                ></a-camera>
+            <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
             <a-entity mindar-image-target="targetIndex: 0" id="brochure-target">
+                <a-plane id="tracked-plane" position="0 0 0" height="0.552" width="1" rotation="0 0 0" material="color: #6a0dad; opacity: 0.3;"></a-plane>
+
                 </a-entity>
         </a-scene>
     </div>
@@ -85,29 +61,126 @@
     <script>
         const brochureTarget = document.querySelector('#brochure-target');
         const interactiveIframe = document.querySelector('#interactive-iframe');
-        // const loadingScreen = document.querySelector('#loading-screen'); // If you removed this, remove from here too
-        // const arScene = document.querySelector('a-scene'); // Keep this if you need scene loaded event
+        const trackedPlane = document.querySelector('#tracked-plane');
+        const arScene = document.querySelector('a-scene');
+        const arCamera = document.querySelector('a-camera');
 
-        // If you're relying on device-orientation-permission-ui, you might not need an explicit loaded listener here
-        // arScene.addEventListener('loaded', () => {
-        //     console.log('MindAR scene loaded.');
-        // });
+        // Three.js is bundled with A-Frame, so we can access it via THREE
+        // Need to make sure Three.js objects are initialized before trying to use them
+        let cameraObj, renderer;
 
-        // Event listener for when the target image is found
+        arScene.addEventListener('loaded', () => {
+            console.log('A-Frame scene loaded.');
+            // Get the Three.js camera and renderer objects after the scene loads
+            cameraObj = arCamera.getObject3D('camera');
+            renderer = arScene.renderer;
+        });
+
+        // Function to get the 2D screen position and size of a 3D A-Frame entity's bounding box
+        function getScreenPositionAndSize(entityEl, cameraObj, renderer) {
+            if (!cameraObj || !renderer || !entityEl.object3D || !entityEl.object3D.matrixWorld) {
+                return null;
+            }
+
+            // Ensure the entity's world matrix is up to date
+            entityEl.object3D.updateMatrixWorld();
+
+            const worldMatrix = entityEl.object3D.matrixWorld;
+
+            // Get the actual width and height attributes of the A-Frame plane
+            const planeWidth = parseFloat(entityEl.getAttribute('width'));
+            const planeHeight = parseFloat(entityEl.getAttribute('height'));
+            const halfWidth = planeWidth / 2;
+            const halfHeight = planeHeight / 2;
+
+            // Define the four corners of the plane in its local coordinates
+            const corners = [
+                new THREE.Vector3(-halfWidth, halfHeight, 0), // Top-left
+                new THREE.Vector3(halfWidth, halfHeight, 0),  // Top-right
+                new THREE.Vector3(-halfWidth, -halfHeight, 0), // Bottom-left
+                new THREE.Vector3(halfWidth, -halfHeight, 0)   // Bottom-right
+            ];
+
+            const screenCorners = [];
+            const tempVector = new THREE.Vector3(); // Re-use vector to avoid allocations
+
+            // Project each corner to screen space
+            for (let i = 0; i < corners.length; i++) {
+                tempVector.copy(corners[i]);
+                tempVector.applyMatrix4(worldMatrix); // Convert local to world coordinates
+                tempVector.project(cameraObj); // Project world to NDC (Normalized Device Coordinates)
+
+                // Convert NDC to screen pixels
+                const screenX = (tempVector.x + 1) / 2 * window.innerWidth;
+                const screenY = (-tempVector.y + 1) / 2 * window.innerHeight; // Y is inverted in screen space
+
+                screenCorners.push({ x: screenX, y: screenY });
+            }
+
+            // Calculate bounding box in screen space
+            const minX = Math.min(...screenCorners.map(c => c.x));
+            const minY = Math.min(...screenCorners.map(c => c.y));
+            const maxX = Math.max(...screenCorners.map(c => c.x));
+            const maxY = Math.max(...screenCorners.map(c => c.y));
+
+            const screenWidth = maxX - minX;
+            const screenHeight = maxY - minY;
+
+            return {
+                x: minX,
+                y: minY,
+                width: screenWidth,
+                height: screenHeight
+            };
+        }
+
+        let updateIframePositionRAF = null; // Use requestAnimationFrame for smoother updates
+
+        const updateIframePosition = () => {
+            if (brochureTarget.components['mindar-image-target'].is ='detected' && cameraObj && renderer) {
+                const rect = getScreenPositionAndSize(trackedPlane, cameraObj, renderer);
+                if (rect && rect.width > 0 && rect.height > 0) { // Ensure valid dimensions
+                    interactiveIframe.style.left = `${rect.x}px`;
+                    interactiveIframe.style.top = `${rect.y}px`;
+                    interactiveIframe.style.width = `${rect.width}px`;
+                    interactiveIframe.style.height = `${rect.height}px`;
+                    interactiveIframe.style.opacity = 1; // Fade in
+
+                    // Optional: If you want to match the rotation of the target (approximate for 2D iframe)
+                    // This is complex for true 3D rotation, but a 2D rotation could be applied
+                    // const targetRotation = trackedPlane.object3D.rotation.z * (180 / Math.PI); // Z-axis rotation
+                    // interactiveIframe.style.transform = `rotate(${targetRotation}deg)`;
+                } else {
+                    interactiveIframe.style.opacity = 0; // Fade out if dimensions are invalid (e.g., target too far)
+                }
+            } else {
+                 interactiveIframe.style.opacity = 0; // Fade out if target not detected
+            }
+            updateIframePositionRAF = requestAnimationFrame(updateIframePosition);
+        };
+
         brochureTarget.addEventListener('targetFound', () => {
             console.log('Brochure target found! Showing interactive content.');
-            interactiveIframe.style.display = 'block'; // Show the iframe
-            // Optionally, send a message to the iframe
+            interactiveIframe.style.display = 'block'; // Ensure it's visible to receive position updates
+            if (!updateIframePositionRAF) {
+                updateIframePositionRAF = requestAnimationFrame(updateIframePosition); // Start the update loop
+            }
             if (interactiveIframe.contentWindow) {
                 interactiveIframe.contentWindow.postMessage('targetFound', '*');
             }
         });
 
-        // Event listener for when the target image is lost
         brochureTarget.addEventListener('targetLost', () => {
             console.log('Brochure target lost! Hiding interactive content.');
-            interactiveIframe.style.display = 'none'; // Hide the iframe
-            // Optionally, send a message to the iframe
+            interactiveIframe.style.opacity = 0; // Start fade out
+            // Give it a moment to fade before hiding completely
+            setTimeout(() => {
+                interactiveIframe.style.display = 'none';
+                if (updateIframePositionRAF) {
+                    cancelAnimationFrame(updateIframePositionRAF);
+                    updateIframePositionRAF = null;
+                }
+            }, 300); // Match transition duration
             if (interactiveIframe.contentWindow) {
                 interactiveIframe.contentWindow.postMessage('targetLost', '*');
             }
@@ -117,11 +190,9 @@
         window.addEventListener('message', (event) => {
             if (event.data === 'interactionComplete') {
                 console.log('Received message from iframe: interactionComplete');
+                // You could, for example, trigger a 3D animation here based on iframe interaction
             }
         });
-
-        // The device-orientation-permission-ui component handles camera permission and auto-start
-        // of MindAR when enabled on the <a-scene> tag.
     </script>
 </body>
 </html>
