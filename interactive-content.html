@@ -1,170 +1,94 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Hogwarts Interactive Guide</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive AR Content</title>
     <style>
         body {
-            font-family: 'Georgia', serif; /* A more magical font */
-            background-color: #1a1a1a; /* Dark magical background */
-            color: #e0e0e0;
+            font-family: 'Inter', sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            width: 100%;
             box-sizing: border-box;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100vh; /* Make it full height of the iframe */
-            text-align: center;
-            background-image: url('https://via.placeholder.com/1920x1080/222222/555555?text=Magic+Background'); /* Placeholder background */
-            background-size: cover;
-            background-position: center;
+            overflow: hidden; /* Prevent iframe scrollbars */
         }
-
         h1 {
-            color: #ffd700; /* Gold color for heading */
-            font-size: 2.5em;
-            margin-bottom: 30px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            font-size: 1.2em;
+            margin-bottom: 5px;
+            color: #6a0dad; /* Harry Potter theme color */
+            text-align: center;
         }
-
-        .menu-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 25px;
-            max-width: 800px;
-            width: 90%;
-            padding: 20px;
-            background-color: rgba(0, 0, 0, 0.7); /* Semi-transparent black */
-            border-radius: 15px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
-            border: 2px solid #6a0dad; /* Magical border color */
-        }
-
-        .menu-item {
-            background-color: #333;
-            padding: 20px;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            min-height: 120px;
-            color: #fff;
-            text-decoration: none; /* If using anchor tags */
-        }
-
-        .menu-item:hover {
-            transform: translateY(-5px) scale(1.05);
-            box-shadow: 0 8px 15px rgba(106, 13, 173, 0.6); /* Glowing effect */
-        }
-
-        .menu-item h2 {
-            margin: 10px 0 5px;
-            font-size: 1.3em;
-            color: #b0c4de; /* Lighter magical color */
-        }
-
-        .menu-item p {
-            font-size: 0.9em;
-            color: #ccc;
-        }
-
-        .icon {
-            font-size: 3em; /* Larger icons */
+        p {
+            font-size: 0.8em;
+            text-align: center;
             margin-bottom: 10px;
-            color: #ffd700;
         }
-
-        #message-area {
-            margin-top: 30px;
-            font-size: 1.1em;
-            color: #a0a0a0;
+        button {
+            background-color: #6a0dad; /* Harry Potter theme color */
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background-color 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        button:hover {
+            background-color: #8a2be2; /* Lighter shade on hover */
+        }
+        .info-box {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 0.7em;
+            text-align: left;
+            width: 90%;
+            max-height: 50%; /* Limit height to prevent overflow */
+            overflow-y: auto; /* Allow scrolling if content is too long */
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.1);
         }
     </style>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
     <h1>Welcome to Hogwarts!</h1>
-    <div class="menu-grid">
-        <div class="menu-item" onclick="handleInteraction('houses')">
-            <i class="fas fa-hat-wizard icon"></i>
-            <h2>Houses</h2>
-            <p>Discover your destiny.</p>
-        </div>
-        <div class="menu-item" onclick="handleInteraction('wand')">
-            <i class="fas fa-magic icon"></i>
-            <h2>Wand Shop</h2>
-            <p>Choose your magical companion.</p>
-        </div>
-        <div class="menu-item" onclick="handleInteraction('potions')">
-            <i class="fas fa-flask icon"></i>
-            <h2>Potions Class</h2>
-            <p>Brew up some magic!</p>
-        </div>
-        <div class="menu-item" onclick="handleInteraction('creatures')">
-            <i class="fas fa-paw icon"></i>
-            <h2>Creatures</h2>
-            <p>Meet magical beasts.</p>
-        </div>
-        <div class="menu-item" onclick="handleInteraction('spells')">
-            <i class="fas fa-sparkles icon"></i>
-            <h2>Spells</h2>
-            <p>Learn powerful incantations.</p>
-        </div>
-        <div class="menu-item" onclick="handleInteraction('quidditch')">
-            <i class="fas fa-quidditch icon"></i>
-            <h2>Quidditch</h2>
-            <p>Fly high and score!</p>
-        </div>
+    <p>Explore the magic within this AR experience.</p>
+    <button id="magicButton">Cast a Spell!</button>
+    <div id="spellInfo" class="info-box" style="display: none;">
+        <p><strong>Incendio!</strong> A charm that conjures flames. Useful for lighting fires or, in more advanced applications, for dueling.</p>
+        <p>Remember, magic requires practice and intent!</p>
     </div>
-    <p id="message-area">Point your camera at the brochure to begin the magic!</p>
 
     <script>
-        const messageArea = document.getElementById('message-area');
+        const magicButton = document.getElementById('magicButton');
+        const spellInfo = document.getElementById('spellInfo');
 
-        function handleInteraction(feature) {
-            let message = '';
-            switch(feature) {
-                case 'houses':
-                    message = 'Sorting Hat says: You are brave like Gryffindor!';
-                    break;
-                case 'wand':
-                    message = 'The wand chooses the wizard! Yours is Holly & Phoenix feather.';
-                    break;
-                case 'potions':
-                    message = 'You brewed a perfect Polyjuice Potion!';
-                    break;
-                case 'creatures':
-                    message = 'Beware of the Niffler, it loves shiny things!';
-                    break;
-                case 'spells':
-                    message = 'You cast Expelliarmus perfectly!';
-                    break;
-                case 'quidditch':
-                    message = 'You caught the Golden Snitch! 150 points for your house!';
-                    break;
-                default:
-                    message = 'Interactive feature activated!';
+        magicButton.addEventListener('click', () => {
+            spellInfo.style.display = spellInfo.style.display === 'none' ? 'block' : 'none';
+            // Optional: Send a message back to the parent AR scene
+            if (window.parent) {
+                window.parent.postMessage('interactionComplete', '*');
             }
-            messageArea.textContent = message;
+        });
 
-            // Optionally, send a message back to the parent AR page
-            window.parent.postMessage('interactionComplete', '*');
-        }
-
-        // Listen for messages from the parent (AR) page
+        // Example of receiving messages from the parent AR scene
         window.addEventListener('message', (event) => {
-            // For security, always verify the origin in a real application
-            // if (event.origin !== "http://localhost:8080") return; // Example: replace with your actual origin
-
             if (event.data === 'targetFound') {
-                messageArea.textContent = 'Welcome, Wizard! Explore Hogwarts.';
+                console.log('Iframe received: Target found!');
+                // You could animate content or show specific elements when target is found
             } else if (event.data === 'targetLost') {
-                messageArea.textContent = 'Hold the brochure steady to continue your adventure.';
+                console.log('Iframe received: Target lost!');
+                // You could pause animations or hide sensitive content when target is lost
             }
         });
     </script>

@@ -21,7 +21,7 @@
         #interactive-iframe {
             position: absolute;
             border: none;
-            /* TEMPORARY DEBUGGING: Comment out these lines to see if iframe loads at all */
+            /* TEMPORARY DEBUGGING: These lines MUST be commented out for debugging purposes */
             /* display: none; */
             /* opacity: 0; */
             z-index: 100; /* Always on top of the AR content */
@@ -30,6 +30,11 @@
             box-shadow: 0 0 15px rgba(106, 13, 173, 0.8); /* Optional: add a glow */
             border-radius: 8px; /* Optional: rounded corners for the iframe */
             transition: opacity 0.3s ease-in-out; /* Smooth fade when appearing/disappearing */
+            /* Ensure it has some initial size for debugging if display/opacity are commented out */
+            width: 50vw; /* Debugging size */
+            height: 50vh; /* Debugging size */
+            top: 25vh; /* Debugging position */
+            left: 25vw; /* Debugging position */
         }
         /* Message box for user feedback */
         #message-box {
@@ -256,11 +261,14 @@
                     interactiveIframe.style.height = `${rect.height}px`;
                     interactiveIframe.style.display = 'block'; // Ensure it's block to apply opacity
                     interactiveIframe.style.opacity = 1; // Fade in
+                    console.log(`Iframe styled: left=${rect.x}, top=${rect.y}, width=${rect.width}, height=${rect.height}, opacity=1`); // More detailed log
                 } else {
                     interactiveIframe.style.opacity = 0; // Fade out if dimensions are invalid (e.g., target too far or rotated away)
+                    console.log('Iframe rect is null, setting opacity to 0.');
                 }
             } else {
                 interactiveIframe.style.opacity = 0; // Fade out if target not detected
+                console.log('Target not tracking, setting iframe opacity to 0.');
             }
             updateIframePositionRAF = requestAnimationFrame(updateIframePosition);
         };
