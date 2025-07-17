@@ -10,7 +10,7 @@
       <a-assets>
 	<img id="card" src="SunwayBooklet-01.jpg" />
 	<!-- <a-asset-item id="avatarModel" src="model/sunwayBuildingads.glb"></a-asset-item> -->
-	<canvas id="dynamicCanvas" width="512" height="256" style="display:none"></canvas>
+	<canvas id="dynamicCanvas" style="display:none"></canvas>
 	<video id="myVideo" src="hydrogen Digital Twin.mp4" style="display:none" crossorigin="anonymous"></video>
       </a-assets>
 
@@ -22,14 +22,12 @@
         <a-plane id="canvasPlane"
          src="#dynamicCanvas"
          position="0 0 0.001"
-         width="1"
-         height="0.552"
+       
          rotation="0 0 0">
         </a-plane>
         <a-plane id="buttonPlane"
          position="0.2 0.1 0.002"
-         width="0.4"
-         height="0.1"
+
          color="#007bff"
          opacity="0"
          class="clickable"
