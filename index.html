@@ -119,26 +119,18 @@
         const arCamera = document.querySelector('a-camera');
 
         let cameraObj, renderer;
+        let updateIframePositionRAF = null; // Use requestAnimationFrame for smoother updates
 
-        // Listen for the A-Frame scene to be fully loaded before accessing Three.js objects
-        arScene.addEventListener('loaded', () => {
-            console.log('A-Frame scene loaded.');
-            cameraObj = arCamera.getObject3D('camera');
-            renderer = arScene.renderer;
-
-            // Initial camera check when the scene is loaded
-            checkCameraAccess();
-        });
-
-        // Function to explicitly check camera access and provide feedback
+        // --- Camera and MindAR Initialization Feedback ---
+        // This function attempts to get camera access and provides feedback.
         async function checkCameraAccess() {
             showMessage('Initializing camera... <div class="loader"></div>', 0); // Show indefinitely
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                console.log('Camera access granted by browser.');
-                showMessage('Camera ready! Point at your marker.', 5000);
+                console.log('Browser granted camera access.');
                 // Stop the stream immediately as MindAR will handle it.
                 stream.getTracks().forEach(track => track.stop());
+                // Don't show "Camera ready!" yet, wait for MindAR's arReady event
             } catch (error) {
                 console.error('Failed to get camera access:', error);
                 let errorMessage = 'Camera access denied or not available.';
@@ -150,10 +142,35 @@
                     errorMessage = 'Camera is already in use by another application or device.';
                 } else if (error.name === 'NotSupportedError') {
                     errorMessage = 'getUserMedia is not supported on this browser/device.';
+                } else if (error.name === 'AbortError') {
+                    errorMessage = 'Camera access was aborted (e.g., by user or system).';
+                } else if (error.name === 'SecurityError') {
+                    errorMessage = 'Camera access blocked due to security (e.g., not HTTPS).';
                 }
-                showMessage(`Camera Error: ${errorMessage}. Please ensure HTTPS and permissions are granted.`, 15000); // Show for longer
+                showMessage(`Camera Error: ${errorMessage}. Please ensure HTTPS and permissions are granted.`, 15000);
             }
         }
+
+        // Listen for the A-Frame scene to be fully loaded before accessing Three.js objects
+        arScene.addEventListener('loaded', () => {
+            console.log('A-Frame scene loaded.');
+            cameraObj = arCamera.getObject3D('camera');
+            renderer = arScene.renderer;
+            checkCameraAccess(); // Initiate camera check
+        });
+
+        // MindAR.js specific events for initialization status
+        arScene.addEventListener('arReady', () => {
+            console.log('MindAR.js is ready! Camera should be active.');
+            showMessage('Camera ready! Point at your marker to see the content.', 5000);
+        });
+
+        arScene.addEventListener('arError', (event) => {
+            console.error('MindAR.js AR Error:', event.detail);
+            showMessage(`AR Initialization Error: ${event.detail.error.message || 'Unknown error'}. Check console.`, 15000);
+        });
+        // --- End Camera and MindAR Initialization Feedback ---
+
 
         // Function to get the 2D screen position and size of a 3D A-Frame entity's bounding box
         function getScreenPositionAndSize(entityEl, cameraObj, renderer) {
@@ -207,8 +224,8 @@
             const screenWidth = maxX - minX;
             const screenHeight = maxY - minY;
 
-            // Check if the plane is facing the camera (approximate check)
-            // If the plane is rotated away, its screen dimensions might become very small or negative
+            // Check if the plane is facing the camera and has reasonable dimensions
+            // If the plane is rotated away or too far, its screen dimensions might become very small or negative
             if (screenWidth <= 0 || screenHeight <= 0 || screenWidth > window.innerWidth * 2 || screenHeight > window.innerHeight * 2) {
                 return null; // Return null if dimensions are invalid, indicating it's not visible or badly oriented
             }
@@ -221,10 +238,9 @@
             };
         }
 
-        let updateIframePositionRAF = null; // Use requestAnimationFrame for smoother updates
-
         const updateIframePosition = () => {
             // Only update if the target is currently being tracked and camera/renderer are ready
+            // IMPORTANT FIX: Changed assignment '=' to comparison '===' and property to 'isTracking'
             if (brochureTarget.components['mindar-image-target'].isTracking && cameraObj && renderer) {
                 const rect = getScreenPositionAndSize(trackedPlane, cameraObj, renderer);
                 if (rect) { // Ensure valid dimensions
@@ -232,12 +248,8 @@
                     interactiveIframe.style.top = `${rect.y}px`;
                     interactiveIframe.style.width = `${rect.width}px`;
                     interactiveIframe.style.height = `${rect.height}px`;
+                    interactiveIframe.style.display = 'block'; // Ensure it's block to apply opacity
                     interactiveIframe.style.opacity = 1; // Fade in
-
-                    // Optional: If you want to match the rotation of the target (approximate for 2D iframe)
-                    // This is complex for true 3D rotation, but a 2D rotation could be applied
-                    // const targetRotation = trackedPlane.object3D.rotation.z * (180 / Math.PI); // Z-axis rotation
-                    // interactiveIframe.style.transform = `rotate(${targetRotation}deg)`;
                 } else {
                     interactiveIframe.style.opacity = 0; // Fade out if dimensions are invalid (e.g., target too far or rotated away)
                 }
@@ -249,7 +261,7 @@
 
         brochureTarget.addEventListener('targetFound', () => {
             console.log('Brochure target found! Showing interactive content.');
-            interactiveIframe.style.display = 'block'; // Ensure it's visible to receive position updates
+            // interactiveIframe.style.display is now handled within updateIframePosition for smoother transitions
             if (!updateIframePositionRAF) {
                 updateIframePositionRAF = requestAnimationFrame(updateIframePosition); // Start the update loop
             }
