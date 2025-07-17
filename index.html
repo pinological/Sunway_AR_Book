@@ -8,7 +8,7 @@
   <body>
     <a-scene mindar-image="imageTargetSrc: targets.mind;" color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
       <a-assets>
-	<img id="card" src="collegeAds.jpeg" />
+	<img id="card" src="SunwayBooklet-01.jpg" />
 	<!-- <a-asset-item id="avatarModel" src="model/sunwayBuildingads.glb"></a-asset-item> -->
 	<canvas id="dynamicCanvas" width="512" height="256" style="display:none"></canvas>
       </a-assets>
@@ -38,18 +38,53 @@
   const canvas = document.getElementById('dynamicCanvas');
   const ctx = canvas.getContext('2d');
 
-  // Draw dynamic content
+  // Button properties
+  const button = {
+    x: 40,
+    y: 180,
+    width: 200,
+    height: 50,
+    color: "#007bff",
+    text: "Click Me!"
+  };
+
+  // Draw dynamic content and button
   function drawDynamicContent() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#222";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Remove or comment out the background fill to keep it transparent:
+    // ctx.fillStyle = "#222";
+    // ctx.fillRect(0, 0, canvas.width, canvas.height);
+
     ctx.fillStyle = "#FFD700";
     ctx.font = "bold 36px Arial";
     ctx.fillText("Dynamic Content!", 40, 80);
     ctx.fillStyle = "#FFF";
     ctx.font = "24px Arial";
     ctx.fillText("Time: " + new Date().toLocaleTimeString(), 40, 140);
+
+    // Draw button
+    ctx.fillStyle = button.color;
+    ctx.fillRect(button.x, button.y, button.width, button.height);
+    ctx.fillStyle = "#FFF";
+    ctx.font = "bold 24px Arial";
+    ctx.fillText(button.text, button.x + 30, button.y + 32);
   }
+
+  // Handle canvas click
+  canvas.addEventListener('click', function(event) {
+    // Get click position relative to canvas
+    const rect = canvas.getBoundingClientRect();
+    const x = (event.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (event.clientY - rect.top) * (canvas.height / rect.height);
+
+    // Check if click is inside button
+    if (
+      x >= button.x && x <= button.x + button.width &&
+      y >= button.y && y <= button.y + button.height
+    ) {
+      alert('Button clicked!');
+    }
+  });
 
   // Update the texture periodically
   setInterval(() => {

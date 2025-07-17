@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+
+    <style>
+        body{
+        background-color: black;
+        display: flex;
+        flex-direction : column;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+       
+        margin: 0;
+}
+
+.heading{
+  color: white;
+}
+
+canvas{
+  background:white;
+   border-radius: 30px;
+}
+    </style>
+</head>
+<body>
+    
+  
+  <h1 class="heading">
+    Canvas Crash Cource
+  </h1>
+
+  <input step="any" type="range" min="0" max="1" value="0" id="slider" style="width: 300px; margin-bottom: 20px;">
+  
+  <canvas id="mainCanvas" width="600" height="600"></canvas>
+
+</body>
+
+<script>
+
+    const slider = document.getElementById('slider');
+    const canvas = document.getElementById('mainCanvas');
+    const ctx = canvas.getContext('2d');
+
+
+    const circle = {
+        x: canvas.width / 8,
+        y: canvas.height / 8,
+        radius: 10,
+        color: 'red',
+        speed: 10
+    };
+
+    function drawCircle() {
+        ctx.beginPath();
+        ctx.arc(circle.x, circle.y, circle.radius, 0, Math.PI * 2);
+        ctx.fillStyle = circle.color;
+        ctx.fill();
+    }
+
+
+    function update(){
+
+        
+        var random = Math.floor(Math.random() * 4);
+        
+        console.log(random);
+
+        if(circle.x > canvas.width - circle.radius || circle.x < circle.radius || circle.y > canvas.height - circle.radius || circle.y < circle.radius){
+            console.log("hit the wall");
+            circle.x = canvas.width / 2;
+            circle.y = canvas.height / 2;
+        }
+        else{
+        if(random === 0){
+            circle.x += circle.speed ;
+        } else if(random === 1){
+            circle.x -= circle.speed;
+        } else if(random === 2){
+            circle.y += circle.speed ;
+        } else {
+            circle.y -= circle.speed ;
+        }
+        }
+
+        circle.color = `rgba(255, 0, 0, ${slider.value})`;
+
+
+        drawCircle();
+        requestAnimationFrame(update);
+    }
+
+    update();
+
+</script>
+</html>
