@@ -1,104 +1,62 @@
-<!DOCTYPE html>
-<html lang="en">
+<html>
   <head>
-    <meta charset="UTF-8" />
-    <title>WebAR Canvas Overlay</title>
-    <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.2/dist/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.7/dist/mindar-image-aframe.prod.js"></script>
-    <style>
-      body { margin: 0; overflow: hidden; }
-      #myCanvas { display: none; }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+    <title>Sunway Card</title>
   </head>
   <body>
-
-    <!-- Hidden canvas -->
-    <canvas id="myCanvas" width="512" height="512"></canvas>
-
-    <!-- A-Frame + MindAR Scene -->
-    <a-scene
-      mindar-image="imageTargetSrc: ./targets.mind; autoStart: true;"
-      embedded
-      color-space="sRGB"
-      renderer="colorManagement: true, physicallyCorrectLights"
-      device-orientation-permission-ui="enabled: true"
-      vr-mode-ui="enabled: false"
-    >
-      <a-assets></a-assets>
-
-      <!-- Tracked Image Target -->
-      <a-entity mindar-image-target="targetIndex: 0">
-        <a-plane id="canvasPlane" width="1" height="1" position="0 0 0"></a-plane>
-      </a-entity>
+    <a-scene mindar-image="imageTargetSrc: targets.mind;" color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+      <a-assets>
+	<img id="card" src="collegeAds.jpeg" />
+	<a-asset-item id="avatarModel" src="model/sunwayBuildingads.glb"></a-asset-item>
+	<canvas id="dynamicCanvas" width="512" height="256" style="display:none"></canvas>
+      </a-assets>
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+      <a-entity mindar-image-target="targetIndex: 0">
+        <a-plane src="#card" position="0 0 0" height="0.552" width="1" rotation="0 0 0"></a-plane>
+        <a-gltf-model rotation="180 90 90 " position="0 0 0.1" scale="0.1 0.1 0.1" src="#avatarModel"
+          
+        >
+        <a-plane id="canvasPlane" src="#dynamicCanvas" position="0 0 0.02" height="0.3" width="0.6"></a-plane>
+      </a-entity>
     </a-scene>
-
-    <script>
-      const canvas = document.getElementById("myCanvas");
-      const ctx = canvas.getContext("2d");
-
-      // Draw to canvas
-      function drawCanvasLoop() {
-        ctx.fillStyle = "white";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        ctx.fillStyle = "black";
-        ctx.font = "24px Arial";
-        ctx.fillText("Live Time:", 30, 50);
-
-        ctx.fillStyle = "blue";
-        ctx.fillText(new Date().toLocaleTimeString(), 30, 90);
-
-        requestAnimationFrame(drawCanvasLoop);
-      }
-
-      drawCanvasLoop();
-
-      // When plane is loaded, apply canvas texture
-      const planeEl = document.getElementById("canvasPlane");
-      planeEl.addEventListener("loaded", () => {
-        const mesh = planeEl.getObject3D("mesh");
-        if (mesh) {
-          const texture = new THREE.CanvasTexture(canvas);
-          mesh.material = new THREE.MeshBasicMaterial({ map: texture });
-
-          // Update canvas texture every frame
-          function updateTexture() {
-            texture.needsUpdate = true;
-            requestAnimationFrame(updateTexture);
-          }
-          updateTexture();
-        }
-      });
-
-      // iOS fix: Ask for permission manually
-      document.addEventListener("DOMContentLoaded", function () {
-        if (
-          typeof DeviceOrientationEvent !== "undefined" &&
-          typeof DeviceOrientationEvent.requestPermission === "function"
-        ) {
-          DeviceOrientationEvent.requestPermission()
-            .catch(() => {
-              const button = document.createElement("button");
-              button.innerText = "Enable AR";
-              button.style.position = "absolute";
-              button.style.top = "50%";
-              button.style.left = "50%";
-              button.style.transform = "translate(-50%, -50%)";
-              button.style.zIndex = "9999";
-              button.style.padding = "1em 2em";
-              document.body.appendChild(button);
-              button.addEventListener("click", () => {
-                DeviceOrientationEvent.requestPermission().then((response) => {
-                  if (response === "granted") {
-                    button.remove();
-                  }
-                });
-              });
-            });
-        }
-      });
-    </script>
   </body>
 </html>
+
+
+<!-- animation="property: position; to: 0 0.1 0.1; dur: 1000; easing: easeInOutQuad; loop: true; dir: alternate" -->
+
+<script>
+  // Get the canvas and its context
+  const canvas = document.getElementById('dynamicCanvas');
+  const ctx = canvas.getContext('2d');
+
+  // Draw dynamic content
+  function drawDynamicContent() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#222";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#FFD700";
+    ctx.font = "bold 36px Arial";
+    ctx.fillText("Dynamic Content!", 40, 80);
+    ctx.fillStyle = "#FFF";
+    ctx.font = "24px Arial";
+    ctx.fillText("Time: " + new Date().toLocaleTimeString(), 40, 140);
+  }
+
+  // Update the texture periodically
+  setInterval(() => {
+    drawDynamicContent();
+    // Notify A-Frame to update the texture
+    const plane = document.querySelector('#canvasPlane');
+    if (plane && plane.components.material && plane.components.material.material.map) {
+      plane.components.material.material.map.needsUpdate = true;
+    }
+  }, 1000);
+
+  // Initial draw
+  drawDynamicContent();
+</script>
