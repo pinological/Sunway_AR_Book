@@ -1,62 +1,71 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.2/dist/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.7/dist/mindar-image-aframe.prod.js"></script>
-  <style>
-    body { margin: 0; overflow: hidden; }
-    canvas#myCanvas { display: none; } /* hide canvas since it's used as texture */
-  </style>
-</head>
-<body>
+  <head>
+    <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.2/dist/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.7/dist/mindar-image-aframe.prod.js"></script>
+    <style>
+      body { margin: 0; overflow: hidden; }
+      #myCanvas { display: none; }
+    </style>
+  </head>
+  <body>
+    <!-- Hidden canvas -->
+    <canvas id="myCanvas" width="512" height="512"></canvas>
 
-<!-- Hidden Canvas -->
-<canvas id="myCanvas" width="512" height="512"></canvas>
+    <!-- A-Frame scene with MindAR -->
+    <a-scene mindar-image="imageTargetSrc: ./targets.mind; autoStart: true;" embedded color-space="sRGB">
+      <a-assets></a-assets>
 
-<!-- AR Scene -->
-<a-scene mindar-image="imageTargetSrc: ./targets.mind; autoStart: true;" embedded color-space="sRGB">
-  <a-assets>
-    <!-- Canvas texture as HTML shader -->
-    <canvas id="canvas-texture" src="#myCanvas"></canvas>
-  </a-assets>
+      <a-entity mindar-image-target="targetIndex: 0">
+        <a-plane id="canvasPlane" width="1" height="1" position="0 0 0" rotation="0 0 0"></a-plane>
+      </a-entity>
 
-  <!-- Tracked Marker -->
-  <a-entity mindar-image-target="targetIndex: 0">
-    <a-plane 
-      width="1" 
-      height="1" 
-      position="0 0 0" 
-      rotation="0 0 0"
-      material="shader: canvas; src: #myCanvas"
-    ></a-plane>
-  </a-entity>
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+    </a-scene>
 
-  <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-</a-scene>
+    <script>
+      const canvas = document.getElementById("myCanvas");
+      const ctx = canvas.getContext("2d");
 
-<script>
-  const canvas = document.getElementById('myCanvas');
-  const ctx = canvas.getContext('2d');
+      // Drawing something dynamic on canvas
+      function drawToCanvas() {
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Example: Draw something on the canvas
-  function drawCanvasContent() {
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "black";
+        ctx.font = "30px Arial";
+        ctx.fillText("Canvas over AR!", 50, 100);
 
-    ctx.fillStyle = "#000";
-    ctx.font = "30px Arial";
-    ctx.fillText("Hello from Canvas!", 50, 100);
+        ctx.fillStyle = "blue";
+        ctx.fillRect(100, 150, 200, 100);
+      }
 
-    ctx.strokeStyle = "#ff0000";
-    ctx.lineWidth = 5;
-    ctx.strokeRect(50, 150, 200, 100);
+      drawToCanvas();
 
-    // Update texture periodically if needed
-    requestAnimationFrame(drawCanvasContent);
-  }
+      const planeEl = document.querySelector("#canvasPlane");
+      planeEl.addEventListener("loaded", () => {
+        const mesh = planeEl.getObject3D("mesh");
+        if (mesh) {
+          const texture = new THREE.CanvasTexture(canvas);
+          texture.needsUpdate = true;
+          mesh.material = new THREE.MeshBasicMaterial({ map: texture, transparent: false });
 
-  drawCanvasContent();
-</script>
+          // Optional: Animate canvas updates
+          function animate() {
+            ctx.fillStyle = "#fff";
+            ctx.fillRect(0, 0, 512, 512);
 
-</body>
+            ctx.fillStyle = "#000";
+            ctx.font = "25px Arial";
+            ctx.fillText("Time: " + new Date().toLocaleTimeString(), 50, 100);
+
+            texture.needsUpdate = true;
+            requestAnimationFrame(animate);
+          }
+
+          animate();
+        }
+      });
+    </script>
+  </body>
 </html>
