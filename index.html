@@ -21,14 +21,15 @@
         #interactive-iframe {
             position: absolute;
             border: none;
-            display: none; /* Hidden by default */
+            /* TEMPORARY DEBUGGING: Comment out these lines to see if iframe loads at all */
+            /* display: none; */
+            /* opacity: 0; */
             z-index: 100; /* Always on top of the AR content */
             transform-origin: top left; /* Important for future potential CSS transforms */
             background-color: rgba(0, 0, 0, 0.7); /* Semi-transparent background for iframe */
             box-shadow: 0 0 15px rgba(106, 13, 173, 0.8); /* Optional: add a glow */
             border-radius: 8px; /* Optional: rounded corners for the iframe */
             transition: opacity 0.3s ease-in-out; /* Smooth fade when appearing/disappearing */
-            opacity: 0; /* Start invisible for the fade-in effect */
         }
         /* Message box for user feedback */
         #message-box {
@@ -88,7 +89,10 @@
             <!-- The target entity that MindAR.js will track -->
             <a-entity mindar-image-target="targetIndex: 0" id="brochure-target">
                 <!-- A transparent plane that matches the size of your target image.
-                     This plane's 3D position will be used to calculate the iframe's 2D screen position. -->
+                     This plane's 3D position will be used to calculate the iframe's 2D screen position.
+                     IMPORTANT: Adjust 'height' and 'width' to match the aspect ratio of your 'targets.mind' image!
+                     For example, if your image is 1920x1080 (16:9 aspect ratio), you might use width="1" height="0.5625" (1 / 16 * 9)
+                -->
                 <a-plane id="tracked-plane" position="0 0 0" height="0.552" width="1" rotation="0 0 0" material="color: #6a0dad; opacity: 0.3;"></a-plane>
 
                 <!-- You can also place other 3D content here if you wish, alongside the iframe -->
@@ -176,6 +180,7 @@
         function getScreenPositionAndSize(entityEl, cameraObj, renderer) {
             // Ensure necessary objects are initialized and entity has a world matrix
             if (!cameraObj || !renderer || !entityEl.object3D || !entityEl.object3D.matrixWorld) {
+                console.warn('getScreenPositionAndSize: Missing camera, renderer, or entity object3D.');
                 return null;
             }
 
@@ -227,6 +232,7 @@
             // Check if the plane is facing the camera and has reasonable dimensions
             // If the plane is rotated away or too far, its screen dimensions might become very small or negative
             if (screenWidth <= 0 || screenHeight <= 0 || screenWidth > window.innerWidth * 2 || screenHeight > window.innerHeight * 2) {
+                console.warn(`getScreenPositionAndSize: Invalid screen dimensions calculated: width=${screenWidth}, height=${screenHeight}. Returning null.`);
                 return null; // Return null if dimensions are invalid, indicating it's not visible or badly oriented
             }
 
@@ -240,9 +246,9 @@
 
         const updateIframePosition = () => {
             // Only update if the target is currently being tracked and camera/renderer are ready
-            // IMPORTANT FIX: Changed assignment '=' to comparison '===' and property to 'isTracking'
             if (brochureTarget.components['mindar-image-target'].isTracking && cameraObj && renderer) {
                 const rect = getScreenPositionAndSize(trackedPlane, cameraObj, renderer);
+                console.log('Iframe target rect:', rect); // LOGGING THE RECT FOR DEBUGGING
                 if (rect) { // Ensure valid dimensions
                     interactiveIframe.style.left = `${rect.x}px`;
                     interactiveIframe.style.top = `${rect.y}px`;
