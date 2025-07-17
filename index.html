@@ -11,6 +11,7 @@
 	<img id="card" src="SunwayBooklet-01.jpg" />
 	<!-- <a-asset-item id="avatarModel" src="model/sunwayBuildingads.glb"></a-asset-item> -->
 	<canvas id="dynamicCanvas" width="512" height="256" style="display:none"></canvas>
+	<video id="myVideo" src="hydrogen Digital Twin.mp4" style="display:none" crossorigin="anonymous"></video>
       </a-assets>
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
@@ -25,6 +26,16 @@
          height="0.552"
          rotation="0 0 0">
         </a-plane>
+        <a-plane id="buttonPlane"
+         position="0.2 0.1 0.002"
+         width="0.4"
+         height="0.1"
+         color="#007bff"
+         opacity="0"
+         class="clickable"
+         event-set__click="_event: click; _target: #canvasPlane; visible: false"
+         button-listener>
+        </a-plane>
       </a-entity>
     </a-scene>
   </body>
@@ -34,7 +45,7 @@
 <!-- animation="property: position; to: 0 0.1 0.1; dur: 1000; easing: easeInOutQuad; loop: true; dir: alternate" -->
 
 <script>
-  // Get the canvas and its context
+  const img = document.getElementById('card');
   const canvas = document.getElementById('dynamicCanvas');
   const ctx = canvas.getContext('2d');
 
@@ -48,54 +59,89 @@
     text: "Click Me!"
   };
 
-  // Draw dynamic content and button
+  let playVideo = false;
+  const video = document.getElementById('myVideo');
+
+  // Draw dynamic content and button or video
   function drawDynamicContent() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    // Remove or comment out the background fill to keep it transparent:
-    // ctx.fillStyle = "#222";
-    // ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    ctx.fillStyle = "#FFD700";
-    ctx.font = "bold 36px Arial";
-    ctx.fillText("Dynamic Content!", 40, 80);
-    ctx.fillStyle = "#FFF";
-    ctx.font = "24px Arial";
-    ctx.fillText("Time: " + new Date().toLocaleTimeString(), 40, 140);
+    if (playVideo && video.readyState >= 2 && !video.paused) {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    } else {
+      ctx.fillStyle = "#FFD700";
+      ctx.font = "bold 36px Arial";
+      ctx.fillText("Dynamic Content!", 40, 80);
+      ctx.fillStyle = "#FFF";
+      ctx.font = "24px Arial";
+      ctx.fillText("Time: " + new Date().toLocaleTimeString(), 40, 140);
 
-    // Draw button
-    ctx.fillStyle = button.color;
-    ctx.fillRect(button.x, button.y, button.width, button.height);
-    ctx.fillStyle = "#FFF";
-    ctx.font = "bold 24px Arial";
-    ctx.fillText(button.text, button.x + 30, button.y + 32);
+      // Draw button
+      ctx.fillStyle = button.color;
+      ctx.fillRect(button.x, button.y, button.width, button.height);
+      ctx.fillStyle = "#FFF";
+      ctx.font = "bold 24px Arial";
+      ctx.fillText(button.text, button.x + 30, button.y + 32);
+    }
   }
 
-  // Handle canvas click
+  // 2D Canvas click (for testing outside AR)
   canvas.addEventListener('click', function(event) {
-    // Get click position relative to canvas
     const rect = canvas.getBoundingClientRect();
     const x = (event.clientX - rect.left) * (canvas.width / rect.width);
     const y = (event.clientY - rect.top) * (canvas.height / rect.height);
 
-    // Check if click is inside button
     if (
       x >= button.x && x <= button.x + button.width &&
       y >= button.y && y <= button.y + button.height
     ) {
-      alert('Button clicked!');
+      playVideo = true;
+      video.currentTime = 0;
+      video.play();
     }
   });
 
-  // Update the texture periodically
-  setInterval(() => {
+  // AR button click
+  AFRAME.registerComponent('button-listener', {
+    init: function () {
+      this.el.addEventListener('click', function () {
+        playVideo = true;
+        video.currentTime = 0;
+        video.play();
+      });
+    }
+  });
+
+  // Draw loop
+  function updateCanvas() {
     drawDynamicContent();
-    // Notify A-Frame to update the texture
     const plane = document.querySelector('#canvasPlane');
     if (plane && plane.components.material && plane.components.material.material.map) {
       plane.components.material.material.map.needsUpdate = true;
     }
-  }, 1000);
+    requestAnimationFrame(updateCanvas);
+  }
 
-  // Initial draw
-  drawDynamicContent();
+  // Set canvas size after image loads
+  img.onload = function() {
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    drawDynamicContent();
+  };
+
+  // If image is already loaded (cache), set canvas size immediately
+  if (img.complete) {
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    drawDynamicContent();
+  }
+
+  // Start the draw loop
+  updateCanvas();
+
+  // Pause video and reset when it ends
+  video.addEventListener('ended', () => {
+    playVideo = false;
+    drawDynamicContent();
+  });
 </script>
