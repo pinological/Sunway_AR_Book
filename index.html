@@ -45,7 +45,7 @@
         renderer="logarithmicDepthBuffer: true;">
 
         <!-- Define the image marker -->
-        <!-- Replace 'my-image-marker.patt' with the actual path to your generated pattern file -->
+        <!-- IMPORTANT: Updated marker URL to pattern-marker.patt -->
         <a-marker preset="custom" type="pattern" url="pattern-marker.patt">
             <!-- This entity will be displayed when the marker is detected -->
             <a-entity
@@ -153,6 +153,28 @@
         document.addEventListener('DOMContentLoaded', () => {
             const scene = document.querySelector('a-scene');
             const webpageOverlay = document.getElementById('webpage-overlay');
+
+            // --- Camera Access Check (Added for debugging) ---
+            // This attempts to get camera access directly and logs errors.
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    console.log('Camera access granted by browser.');
+                    // Stop the stream immediately as AR.js will handle it.
+                    stream.getTracks().forEach(track => track.stop());
+                })
+                .catch(error => {
+                    console.error('Failed to get camera access:', error);
+                    let errorMessage = 'Camera access denied or not available.';
+                    if (error.name === 'NotAllowedError') {
+                        errorMessage = 'Camera permission denied. Please allow camera access in your browser settings.';
+                    } else if (error.name === 'NotFoundError') {
+                        errorMessage = 'No camera found on this device.';
+                    } else if (error.name === 'NotReadableError') {
+                        errorMessage = 'Camera is already in use by another application.';
+                    }
+                    showMessage(`Camera Error: ${errorMessage}`, 10000); // Show for longer
+                });
+            // --- End Camera Access Check ---
 
             // Listen for marker found event
             scene.addEventListener('markerFound', function(event) {
