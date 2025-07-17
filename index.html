@@ -1,301 +1,62 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>AR.js Webpage Overlay</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no" />
-    <style>
-        body {
-            margin: 0;
-            overflow: hidden; /* Hide scrollbars */
-            font-family: 'Inter', sans-serif;
-            background-color: #000;
-        }
-        #ar-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            z-index: 1; /* AR content */
-        }
-        #interactive-iframe {
-            position: absolute;
-            border: none;
-            /* TEMPORARY DEBUGGING: Comment out these lines to see if iframe loads at all */
-            /* display: none; */
-            /* opacity: 0; */
-            z-index: 100; /* Always on top of the AR content */
-            transform-origin: top left; /* Important for future potential CSS transforms */
-            background-color: rgba(0, 0, 0, 0.7); /* Semi-transparent background for iframe */
-            box-shadow: 0 0 15px rgba(106, 13, 173, 0.8); /* Optional: add a glow */
-            border-radius: 8px; /* Optional: rounded corners for the iframe */
-            transition: opacity 0.3s ease-in-out; /* Smooth fade when appearing/disappearing */
-            /* Ensure it has some initial size for debugging if display/opacity are commented out */
-            width: 50vw; /* Debugging size */
-            height: 50vh; /* Debugging size */
-            top: 25vh; /* Debugging position */
-            left: 25vw; /* Debugging position */
-        }
-        /* Message box for user feedback */
-        #message-box {
-            position: fixed;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-size: 16px;
-            z-index: 1000;
-            display: none; /* Hidden by default */
-            text-align: center;
-        }
-        /* Loading spinner for camera/AI generation */
-        .loader {
-            border: 4px solid #f3f3f3; /* Light grey */
-            border-top: 4px solid #3498db; /* Blue */
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            animation: spin 2s linear infinite;
-            display: inline-block;
-            vertical-align: middle;
-            margin-left: 10px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
-    <!-- A-Frame library -->
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    <!-- AR.js library with NFT (Natural Feature Tracking) support -->
-    <!-- Make sure to use the -nft.js build for image tracking -->
-    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.2/dist/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.7/dist/mindar-image-aframe.prod.js"></script>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    canvas#myCanvas { display: none; } /* hide canvas since it's used as texture */
+  </style>
 </head>
 <body>
-    <div id="message-box"></div>
 
-    <div id="ar-container">
-        <a-scene
-            vr-mode-ui="enabled: false;"
-            arjs="sourceType: webcam; debugUIEnabled: true;"
-            renderer="logarithmicDepthBuffer: true;" embedded
-        >
-            <a-assets>
-                <!-- No assets needed here for NFT markers, they are loaded via <a-nft> url -->
-            </a-assets>
+<!-- Hidden Canvas -->
+<canvas id="myCanvas" width="512" height="512"></canvas>
 
-            <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+<!-- AR Scene -->
+<a-scene mindar-image="imageTargetSrc: ./targets.mind; autoStart: true;" embedded color-space="sRGB">
+  <a-assets>
+    <!-- Canvas texture as HTML shader -->
+    <canvas id="canvas-texture" src="#myCanvas"></canvas>
+  </a-assets>
 
-            <!-- AR.js NFT Image Target -->
-            <!-- IMPORTANT:
-                 1. Replace 'myimage' with the base name of your generated NFT files (e.g., if files are 'trex.fset', 'trex.fset3', 'trex.iset', use 'trex').
-                 2. Ensure the 'url' points to the directory containing your .fset, .fset3, .iset files.
-                    Example: If files are in 'assets/myimage/', then url="assets/myimage/myimage"
-                 3. Adjust 'height' and 'width' to match the aspect ratio of your physical image marker for accurate projection.
-            -->
-            <a-nft
-                type="nft"
-                url="./assets/myimage/myimage"
-                id="image-target"
-                smooth="true" smoothCount="10" smoothTolerance=".01" smoothThreshold="5"
-            >
-                <!-- A transparent plane that matches the size of your target image.
-                     This plane's 3D position will be used to calculate the iframe's 2D screen position. -->
-                <a-plane id="tracked-plane" position="0 0 0" height="0.552" width="1" rotation="0 0 0" material="color: #6a0dad; opacity: 0.3;"></a-plane>
-            </a-nft>
-        </a-scene>
-    </div>
+  <!-- Tracked Marker -->
+  <a-entity mindar-image-target="targetIndex: 0">
+    <a-plane 
+      width="1" 
+      height="1" 
+      position="0 0 0" 
+      rotation="0 0 0"
+      material="shader: canvas; src: #myCanvas"
+    ></a-plane>
+  </a-entity>
 
-    <!-- The iframe that will contain your interactive webpage content -->
-    <iframe id="interactive-iframe" src="./interactive-content.html"></iframe>
+  <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+</a-scene>
 
-    <script>
-        // Function to display messages to the user
-        function showMessage(message, duration = 3000) {
-            const messageBox = document.getElementById('message-box');
-            messageBox.innerHTML = message; // Use innerHTML to allow for spinner
-            messageBox.style.display = 'block';
-            if (duration > 0) { // Only hide if duration is positive
-                setTimeout(() => {
-                    messageBox.style.display = 'none';
-                }, duration);
-            }
-        }
+<script>
+  const canvas = document.getElementById('myCanvas');
+  const ctx = canvas.getContext('2d');
 
-        const imageTarget = document.querySelector('#image-target'); // Changed from brochureTarget
-        const interactiveIframe = document.querySelector('#interactive-iframe');
-        const trackedPlane = document.querySelector('#tracked-plane');
-        const arScene = document.querySelector('a-scene');
-        const arCamera = document.querySelector('a-camera');
+  // Example: Draw something on the canvas
+  function drawCanvasContent() {
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        let cameraObj, renderer;
-        let updateIframePositionRAF = null; // Use requestAnimationFrame for smoother updates
+    ctx.fillStyle = "#000";
+    ctx.font = "30px Arial";
+    ctx.fillText("Hello from Canvas!", 50, 100);
 
-        // --- Camera and AR.js Initialization Feedback ---
-        async function checkCameraAccess() {
-            showMessage('Initializing camera... <div class="loader"></div>', 0);
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                console.log('Browser granted camera access.');
-                stream.getTracks().forEach(track => track.stop());
-                // Wait for AR.js to be ready
-            } catch (error) {
-                console.error('Failed to get camera access:', error);
-                let errorMessage = 'Camera access denied or not available.';
-                if (error.name === 'NotAllowedError') {
-                    errorMessage = 'Camera permission denied. Please allow camera access in your browser settings.';
-                } else if (error.name === 'NotFoundError') {
-                    errorMessage = 'No camera found on this device.';
-                } else if (error.name === 'NotReadableError') {
-                    errorMessage = 'Camera is already in use by another application or device.';
-                } else if (error.name === 'NotSupportedError') {
-                    errorMessage = 'getUserMedia is not supported on this browser/device.';
-                } else if (error.name === 'AbortError') {
-                    errorMessage = 'Camera access was aborted (e.g., by user or system).';
-                } else if (error.name === 'SecurityError') {
-                    errorMessage = 'Camera access blocked due to security (e.g., not HTTPS).';
-                }
-                showMessage(`Camera Error: ${errorMessage}. Please ensure HTTPS and permissions are granted.`, 15000);
-            }
-        }
+    ctx.strokeStyle = "#ff0000";
+    ctx.lineWidth = 5;
+    ctx.strokeRect(50, 150, 200, 100);
 
-        arScene.addEventListener('loaded', () => {
-            console.log('A-Frame scene loaded.');
-            cameraObj = arCamera.getObject3D('camera');
-            renderer = arScene.renderer;
-            checkCameraAccess(); // Initiate camera check
-        });
+    // Update texture periodically if needed
+    requestAnimationFrame(drawCanvasContent);
+  }
 
-        // AR.js specific events for initialization status
-        arScene.addEventListener('arjs-original-camera-init', () => {
-            console.log('AR.js camera initialized.');
-            // This event fires when AR.js has successfully set up its camera stream.
-            showMessage('Camera ready! Point at your marker to see the content.', 5000);
-        });
+  drawCanvasContent();
+</script>
 
-        // AR.js doesn't have a direct 'arError' event like MindAR, but camera errors are caught by checkCameraAccess
-        // and other issues might show in the console from AR.js itself.
-        // --- End Camera and AR.js Initialization Feedback ---
-
-
-        // Function to get the 2D screen position and size of a 3D A-Frame entity's bounding box
-        function getScreenPositionAndSize(entityEl, cameraObj, renderer) {
-            if (!cameraObj || !renderer || !entityEl.object3D || !entityEl.object3D.matrixWorld) {
-                console.warn('getScreenPositionAndSize: Missing camera, renderer, or entity object3D.');
-                return null;
-            }
-
-            entityEl.object3D.updateMatrixWorld();
-            const worldMatrix = entityEl.object3D.matrixWorld;
-
-            const planeWidth = parseFloat(entityEl.getAttribute('width'));
-            const planeHeight = parseFloat(entityEl.getAttribute('height'));
-            const halfWidth = planeWidth / 2;
-            const halfHeight = planeHeight / 2;
-
-            const corners = [
-                new THREE.Vector3(-halfWidth, halfHeight, 0), // Top-left
-                new THREE.Vector3(halfWidth, halfHeight, 0),  // Top-right
-                new THREE.Vector3(-halfWidth, -halfHeight, 0), // Bottom-left
-                new THREE.Vector3(halfWidth, -halfHeight, 0)   // Bottom-right
-            ];
-
-            const screenCorners = [];
-            const tempVector = new THREE.Vector3();
-
-            for (let i = 0; i < corners.length; i++) {
-                tempVector.copy(corners[i]);
-                tempVector.applyMatrix4(worldMatrix);
-                tempVector.project(cameraObj);
-
-                const screenX = (tempVector.x + 1) / 2 * window.innerWidth;
-                const screenY = (-tempVector.y + 1) / 2 * window.innerHeight;
-
-                screenCorners.push({ x: screenX, y: screenY });
-            }
-
-            const minX = Math.min(...screenCorners.map(c => c.x));
-            const minY = Math.min(...screenCorners.map(c => c.y));
-            const maxX = Math.max(...screenCorners.map(c => c.x));
-            const maxY = Math.max(...screenCorners.map(c => c.y));
-
-            const screenWidth = maxX - minX;
-            const screenHeight = maxY - minY;
-
-            if (screenWidth <= 0 || screenHeight <= 0 || screenWidth > window.innerWidth * 2 || screenHeight > window.innerHeight * 2) {
-                console.warn(`getScreenPositionAndSize: Invalid screen dimensions calculated: width=${screenWidth}, height=${screenHeight}. Returning null.`);
-                return null;
-            }
-
-            return {
-                x: minX,
-                y: minY,
-                width: screenWidth,
-                height: screenHeight
-            };
-        }
-
-        const updateIframePosition = () => {
-            // AR.js <a-nft> component has 'is-tracking' attribute for tracking status
-            const isTracking = imageTarget.getAttribute('is-tracking');
-            if (isTracking && cameraObj && renderer) {
-                const rect = getScreenPositionAndSize(trackedPlane, cameraObj, renderer);
-                console.log('Iframe target rect:', rect); // LOGGING THE RECT FOR DEBUGGING
-                if (rect) {
-                    interactiveIframe.style.left = `${rect.x}px`;
-                    interactiveIframe.style.top = `${rect.y}px`;
-                    interactiveIframe.style.width = `${rect.width}px`;
-                    interactiveIframe.style.height = `${rect.height}px`;
-                    interactiveIframe.style.display = 'block';
-                    interactiveIframe.style.opacity = 1;
-                    console.log(`Iframe styled: left=${rect.x}, top=${rect.y}, width=${rect.width}, height=${rect.height}, opacity=1`);
-                } else {
-                    interactiveIframe.style.opacity = 0;
-                    console.log('Iframe rect is null, setting opacity to 0.');
-                }
-            } else {
-                interactiveIframe.style.opacity = 0;
-                console.log('Target not tracking, setting iframe opacity to 0.');
-            }
-            updateIframePositionRAF = requestAnimationFrame(updateIframePosition);
-        };
-
-        // AR.js NFT target events
-        imageTarget.addEventListener('markerFound', () => {
-            console.log('AR.js NFT marker found! Showing interactive content.');
-            if (!updateIframePositionRAF) {
-                updateIframePositionRAF = requestAnimationFrame(updateIframePosition);
-            }
-            if (interactiveIframe.contentWindow) {
-                interactiveIframe.contentWindow.postMessage('targetFound', '*');
-            }
-        });
-
-        imageTarget.addEventListener('markerLost', () => {
-            console.log('AR.js NFT marker lost! Hiding interactive content.');
-            interactiveIframe.style.opacity = 0;
-            setTimeout(() => {
-                interactiveIframe.style.display = 'none';
-                if (updateIframePositionRAF) {
-                    cancelAnimationFrame(updateIframePositionRAF);
-                    updateIframePositionRAF = null;
-                }
-            }, 300);
-            if (interactiveIframe.contentWindow) {
-                interactiveIframe.contentWindow.postMessage('targetLost', '*');
-            }
-        });
-
-        // Optional: Listen for messages from the iframe
-        window.addEventListener('message', (event) => {
-            if (event.data === 'interactionComplete') {
-                console.log('Received message from iframe: interactionComplete');
-            }
-        });
-    </script>
 </body>
 </html>
