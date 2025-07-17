@@ -1,22 +1,34 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web AR Webpage Overlay</title>
-    <!-- A-Frame library for building VR/AR experiences -->
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    <!-- AR.js library for AR capabilities -->
-    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.min.js"></script>
+    <title>Harry Potter AR Brochure</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no" />
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Inter', sans-serif; }
-        /* Ensure the AR scene takes full screen */
-        a-scene {
-            width: 100vw;
-            height: 100vh;
-            position: fixed;
+        body {
+            margin: 0;
+            overflow: hidden; /* Hide scrollbars */
+            font-family: 'Inter', sans-serif; /* Changed to Inter for consistency */
+            background-color: #000;
+        }
+        #ar-container {
+            position: absolute;
             top: 0;
             left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1; /* AR content */
+        }
+        #interactive-iframe {
+            position: absolute;
+            border: none;
+            display: none; /* Hidden by default */
+            z-index: 100; /* Always on top of the AR content */
+            transform-origin: top left; /* Important for future potential CSS transforms */
+            background-color: rgba(0, 0, 0, 0.7); /* Semi-transparent background for iframe */
+            box-shadow: 0 0 15px rgba(106, 13, 173, 0.8); /* Optional: add a glow */
+            border-radius: 8px; /* Optional: rounded corners for the iframe */
+            transition: opacity 0.3s ease-in-out; /* Smooth fade when appearing/disappearing */
+            opacity: 0; /* Start invisible for the fade-in effect */
         }
         /* Message box for user feedback */
         #message-box {
@@ -33,176 +45,243 @@
             display: none; /* Hidden by default */
             text-align: center;
         }
+        /* Loading spinner for camera/AI generation */
+        .loader {
+            border: 4px solid #f3f3f3; /* Light grey */
+            border-top: 4px solid #3498db; /* Blue */
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 2s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
+    <!-- A-Frame library for building VR/AR experiences -->
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <!-- MindAR.js library for AR capabilities -->
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 </head>
 <body>
     <div id="message-box"></div>
 
-    <!-- A-Frame AR Scene -->
-    <a-scene
-        vr-mode-ui="enabled: false;"
-        arjs="sourceType: webcam; debugUIEnabled: false;"
-        renderer="logarithmicDepthBuffer: true;">
+    <div id="ar-container">
+        <a-scene
+            mindar-image="imageTargetSrc: ./targets.mind;"
+            color-space="sRGB"
+            renderer="colorManagement: true, physicallyCorrectLights: true"
+            vr-mode-ui="enabled: false"
+            device-orientation-permission-ui="enabled: true" embedded
+        >
+            <a-assets>
+                <!-- You can add 3D models, images, or other assets here if needed -->
+            </a-assets>
 
-        <!-- Define the image marker -->
-        <!-- IMPORTANT: Updated marker URL to pattern-marker.patt -->
-        <a-marker preset="custom" type="pattern" url="pattern-marker.patt">
-            <!-- This entity will be displayed when the marker is detected -->
-            <a-entity
-                id="webpage-overlay"
-                position="0 0 0"
-                scale="1 1 1"
-                visible="false"
-                rotation="-90 0 0"> <!-- Rotate to face upwards from the marker -->
+            <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-                <!-- Background for the simulated webpage -->
-                <a-plane
-                    color="#F0F0F0"
-                    width="1.5"
-                    height="1.0"
-                    position="0 0 -0.01"
-                    shader="flat"
-                    material="roughness: 0.8; metalness: 0.1;"
-                    geometry="primitive: plane; width: 1.5; height: 1.0;">
-                </a-plane>
+            <!-- The target entity that MindAR.js will track -->
+            <a-entity mindar-image-target="targetIndex: 0" id="brochure-target">
+                <!-- A transparent plane that matches the size of your target image.
+                     This plane's 3D position will be used to calculate the iframe's 2D screen position. -->
+                <a-plane id="tracked-plane" position="0 0 0" height="0.552" width="1" rotation="0 0 0" material="color: #6a0dad; opacity: 0.3;"></a-plane>
 
-                <!-- Simulated Webpage Content -->
-                <a-text
-                    value="Welcome to AR Webpage!"
-                    color="#333"
-                    width="1.4"
-                    position="0 0.4 0"
-                    align="center"
-                    wrap-count="30"
-                    font="https://cdn.aframe.io/fonts/DejaVu-sdf.fnt"
-                    shader="msdf"
-                    text="align: center; color: #333; wrapCount: 30;"></a-text>
-
-                <a-text
-                    value="This is a simulated webpage overlayed on your image marker."
-                    color="#555"
-                    width="1.3"
-                    position="0 0.25 0"
-                    align="center"
-                    wrap-count="40"
-                    font="https://cdn.aframe.io/fonts/DejaVu-sdf.fnt"
-                    shader="msdf"
-                    text="align: center; color: #555; wrapCount: 40;"></a-text>
-
-                <a-text
-                    value="You can customize this content with more text, images, or even interactive elements."
-                    color="#555"
-                    width="1.3"
-                    position="0 0.05 0"
-                    align="center"
-                    wrap-count="40"
-                    font="https://cdn.aframe.io/fonts/DejaVu-sdf.fnt"
-                    shader="msdf"
-                    text="align: center; color: #555; wrapCount: 40;"></a-text>
-
-                <!-- Example Button -->
-                <a-box
-                    color="#4CAF50"
-                    width="0.5"
-                    height="0.15"
-                    depth="0.05"
-                    position="0 -0.25 0.01"
-                    material="roughness: 0.8; metalness: 0.1;"
-                    class="clickable"
-                    event-set__click="material.color: #66BB6A;"
-                    event-set__mouseenter="material.color: #66BB6A;"
-                    event-set__mouseleave="material.color: #4CAF50;">
-                    <a-text
-                        value="Learn More"
-                        color="white"
-                        width="1.0"
-                        position="0 0 0.03"
-                        align="center"
-                        wrap-count="15"
-                        font="https://cdn.aframe.io/fonts/DejaVu-sdf.fnt"
-                        shader="msdf"
-                        text="align: center; color: white; wrapCount: 15;"></a-text>
-                </a-box>
-
-                <!-- Placeholder Image -->
-                <a-image
-                    src="https://placehold.co/200x100/A0A0A0/FFFFFF?text=Image"
-                    width="0.8"
-                    height="0.4"
-                    position="0 -0.45 0.01">
-                </a-image>
-
+                <!-- You can also place other 3D content here if you wish, alongside the iframe -->
             </a-entity>
-        </a-marker>
+        </a-scene>
+    </div>
 
-        <!-- A-Frame camera -->
-        <a-entity camera></a-entity>
-    </a-scene>
+    <!-- The iframe that will contain your interactive webpage content -->
+    <iframe id="interactive-iframe" src="./interactive-content.html"></iframe>
 
     <script>
         // Function to display messages to the user
         function showMessage(message, duration = 3000) {
             const messageBox = document.getElementById('message-box');
-            messageBox.textContent = message;
+            messageBox.innerHTML = message; // Use innerHTML to allow for spinner
             messageBox.style.display = 'block';
-            setTimeout(() => {
-                messageBox.style.display = 'none';
-            }, duration);
+            if (duration > 0) { // Only hide if duration is positive
+                setTimeout(() => {
+                    messageBox.style.display = 'none';
+                }, duration);
+            }
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const scene = document.querySelector('a-scene');
-            const webpageOverlay = document.getElementById('webpage-overlay');
+        const brochureTarget = document.querySelector('#brochure-target');
+        const interactiveIframe = document.querySelector('#interactive-iframe');
+        const trackedPlane = document.querySelector('#tracked-plane');
+        const arScene = document.querySelector('a-scene');
+        const arCamera = document.querySelector('a-camera');
 
-            // --- Camera Access Check (Added for debugging) ---
-            // This attempts to get camera access directly and logs errors.
-            navigator.mediaDevices.getUserMedia({ video: true })
-                .then(stream => {
-                    console.log('Camera access granted by browser.');
-                    // Stop the stream immediately as AR.js will handle it.
-                    stream.getTracks().forEach(track => track.stop());
-                })
-                .catch(error => {
-                    console.error('Failed to get camera access:', error);
-                    let errorMessage = 'Camera access denied or not available.';
-                    if (error.name === 'NotAllowedError') {
-                        errorMessage = 'Camera permission denied. Please allow camera access in your browser settings.';
-                    } else if (error.name === 'NotFoundError') {
-                        errorMessage = 'No camera found on this device.';
-                    } else if (error.name === 'NotReadableError') {
-                        errorMessage = 'Camera is already in use by another application.';
-                    }
-                    showMessage(`Camera Error: ${errorMessage}`, 10000); // Show for longer
-                });
-            // --- End Camera Access Check ---
+        let cameraObj, renderer;
 
-            // Listen for marker found event
-            scene.addEventListener('markerFound', function(event) {
-                console.log('Marker Found!');
-                webpageOverlay.setAttribute('visible', true);
-                showMessage('Marker found! Displaying webpage overlay.');
-            });
+        // Listen for the A-Frame scene to be fully loaded before accessing Three.js objects
+        arScene.addEventListener('loaded', () => {
+            console.log('A-Frame scene loaded.');
+            cameraObj = arCamera.getObject3D('camera');
+            renderer = arScene.renderer;
 
-            // Listen for marker lost event
-            scene.addEventListener('markerLost', function(event) {
-                console.log('Marker Lost!');
-                webpageOverlay.setAttribute('visible', false);
-                showMessage('Marker lost. Overlay hidden.', 1500);
-            });
+            // Initial camera check when the scene is loaded
+            checkCameraAccess();
+        });
 
-            // Handle click on the simulated button
-            const learnMoreButton = webpageOverlay.querySelector('a-box');
-            if (learnMoreButton) {
-                learnMoreButton.addEventListener('click', () => {
-                    showMessage('Button clicked! (In a real app, this would navigate or show more content)');
-                    console.log('Learn More button clicked!');
-                    // In a real application, you might open a new tab or change the AR content
-                    // window.open('https://www.example.com', '_blank');
-                });
+        // Function to explicitly check camera access and provide feedback
+        async function checkCameraAccess() {
+            showMessage('Initializing camera... <div class="loader"></div>', 0); // Show indefinitely
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                console.log('Camera access granted by browser.');
+                showMessage('Camera ready! Point at your marker.', 5000);
+                // Stop the stream immediately as MindAR will handle it.
+                stream.getTracks().forEach(track => track.stop());
+            } catch (error) {
+                console.error('Failed to get camera access:', error);
+                let errorMessage = 'Camera access denied or not available.';
+                if (error.name === 'NotAllowedError') {
+                    errorMessage = 'Camera permission denied. Please allow camera access in your browser settings.';
+                } else if (error.name === 'NotFoundError') {
+                    errorMessage = 'No camera found on this device.';
+                } else if (error.name === 'NotReadableError') {
+                    errorMessage = 'Camera is already in use by another application or device.';
+                } else if (error.name === 'NotSupportedError') {
+                    errorMessage = 'getUserMedia is not supported on this browser/device.';
+                }
+                showMessage(`Camera Error: ${errorMessage}. Please ensure HTTPS and permissions are granted.`, 15000); // Show for longer
+            }
+        }
+
+        // Function to get the 2D screen position and size of a 3D A-Frame entity's bounding box
+        function getScreenPositionAndSize(entityEl, cameraObj, renderer) {
+            // Ensure necessary objects are initialized and entity has a world matrix
+            if (!cameraObj || !renderer || !entityEl.object3D || !entityEl.object3D.matrixWorld) {
+                return null;
             }
 
-            // Initial message to guide the user
-            showMessage('Point your camera at the image marker to see the AR overlay!');
+            // Update the entity's world matrix to reflect its current 3D position and rotation
+            entityEl.object3D.updateMatrixWorld();
+
+            const worldMatrix = entityEl.object3D.matrixWorld;
+
+            // Get the actual width and height attributes of the A-Frame plane
+            const planeWidth = parseFloat(entityEl.getAttribute('width'));
+            const planeHeight = parseFloat(entityEl.getAttribute('height'));
+            const halfWidth = planeWidth / 2;
+            const halfHeight = planeHeight / 2;
+
+            // Define the four corners of the plane in its local coordinates
+            // (assuming the plane's origin is at its center)
+            const corners = [
+                new THREE.Vector3(-halfWidth, halfHeight, 0), // Top-left
+                new THREE.Vector3(halfWidth, halfHeight, 0),  // Top-right
+                new THREE.Vector3(-halfWidth, -halfHeight, 0), // Bottom-left
+                new THREE.Vector3(halfWidth, -halfHeight, 0)   // Bottom-right
+            ];
+
+            const screenCorners = [];
+            const tempVector = new THREE.Vector3(); // Re-use vector to avoid allocations
+
+            // Project each corner to screen space
+            for (let i = 0; i < corners.length; i++) {
+                tempVector.copy(corners[i]);
+                tempVector.applyMatrix4(worldMatrix); // Convert local to world coordinates
+                tempVector.project(cameraObj); // Project world to NDC (Normalized Device Coordinates)
+
+                // Convert NDC to screen pixels
+                const screenX = (tempVector.x + 1) / 2 * window.innerWidth;
+                const screenY = (-tempVector.y + 1) / 2 * window.innerHeight; // Y is inverted in screen space
+
+                screenCorners.push({ x: screenX, y: screenY });
+            }
+
+            // Calculate bounding box in screen space
+            const minX = Math.min(...screenCorners.map(c => c.x));
+            const minY = Math.min(...screenCorners.map(c => c.y));
+            const maxX = Math.max(...screenCorners.map(c => c.x));
+            const maxY = Math.max(...screenCorners.map(c => c.y));
+
+            const screenWidth = maxX - minX;
+            const screenHeight = maxY - minY;
+
+            // Check if the plane is facing the camera (approximate check)
+            // If the plane is rotated away, its screen dimensions might become very small or negative
+            if (screenWidth <= 0 || screenHeight <= 0 || screenWidth > window.innerWidth * 2 || screenHeight > window.innerHeight * 2) {
+                return null; // Return null if dimensions are invalid, indicating it's not visible or badly oriented
+            }
+
+            return {
+                x: minX,
+                y: minY,
+                width: screenWidth,
+                height: screenHeight
+            };
+        }
+
+        let updateIframePositionRAF = null; // Use requestAnimationFrame for smoother updates
+
+        const updateIframePosition = () => {
+            // Only update if the target is currently being tracked and camera/renderer are ready
+            if (brochureTarget.components['mindar-image-target'].isTracking && cameraObj && renderer) {
+                const rect = getScreenPositionAndSize(trackedPlane, cameraObj, renderer);
+                if (rect) { // Ensure valid dimensions
+                    interactiveIframe.style.left = `${rect.x}px`;
+                    interactiveIframe.style.top = `${rect.y}px`;
+                    interactiveIframe.style.width = `${rect.width}px`;
+                    interactiveIframe.style.height = `${rect.height}px`;
+                    interactiveIframe.style.opacity = 1; // Fade in
+
+                    // Optional: If you want to match the rotation of the target (approximate for 2D iframe)
+                    // This is complex for true 3D rotation, but a 2D rotation could be applied
+                    // const targetRotation = trackedPlane.object3D.rotation.z * (180 / Math.PI); // Z-axis rotation
+                    // interactiveIframe.style.transform = `rotate(${targetRotation}deg)`;
+                } else {
+                    interactiveIframe.style.opacity = 0; // Fade out if dimensions are invalid (e.g., target too far or rotated away)
+                }
+            } else {
+                interactiveIframe.style.opacity = 0; // Fade out if target not detected
+            }
+            updateIframePositionRAF = requestAnimationFrame(updateIframePosition);
+        };
+
+        brochureTarget.addEventListener('targetFound', () => {
+            console.log('Brochure target found! Showing interactive content.');
+            interactiveIframe.style.display = 'block'; // Ensure it's visible to receive position updates
+            if (!updateIframePositionRAF) {
+                updateIframePositionRAF = requestAnimationFrame(updateIframePosition); // Start the update loop
+            }
+            // You can send a message to the iframe to notify it the target is found
+            if (interactiveIframe.contentWindow) {
+                interactiveIframe.contentWindow.postMessage('targetFound', '*');
+            }
+        });
+
+        brochureTarget.addEventListener('targetLost', () => {
+            console.log('Brochure target lost! Hiding interactive content.');
+            interactiveIframe.style.opacity = 0; // Start fade out
+            // Give it a moment to fade before hiding completely
+            setTimeout(() => {
+                interactiveIframe.style.display = 'none';
+                if (updateIframePositionRAF) {
+                    cancelAnimationFrame(updateIframePositionRAF);
+                    updateIframePositionRAF = null;
+                }
+            }, 300); // Match transition duration
+            // You can send a message to the iframe to notify it the target is lost
+            if (interactiveIframe.contentWindow) {
+                interactiveIframe.contentWindow.postMessage('targetLost', '*');
+            }
+        });
+
+        // Optional: Listen for messages from the iframe
+        window.addEventListener('message', (event) => {
+            if (event.data === 'interactionComplete') {
+                console.log('Received message from iframe: interactionComplete');
+                // You could, for example, trigger a 3D animation here based on iframe interaction
+            }
         });
     </script>
 </body>
